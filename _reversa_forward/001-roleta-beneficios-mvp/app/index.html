@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Roleta de Benefícios</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%234f46e5'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='white'%3E%F0%9F%8E%B0%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+    <!-- Header com Status de Conectividade e Sincronização -->
+    <header>
+        <div class="brand">
+            <span class="brand-icon">🎰</span>
+            <span class="brand-title" id="instNameHeader">Roleta de Benefícios</span>
+        </div>
+        <div class="header-status">
+            <span id="connBadge" class="badge badge-online">● Online</span>
+            <span id="pendingBadge" class="badge badge-pending zero">0 pendentes</span>
+            <button id="btnOpenAdmin" title="Painel Admin" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">⚙️</button>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal: Roleta e Formulário de Cadastro -->
+    <main>
+        <!-- Roleta -->
+        <div class="wheel-container">
+            <div class="wheel-pointer"></div>
+            <canvas id="wheelCanvas"></canvas>
+        </div>
+
+        <!-- Formulário de Captação -->
+        <div class="card" id="formCard">
+            <h2>Gire e Ganhe Benefícios!</h2>
+            <p class="subtitle">Preencha seus dados para participar do sorteio imediato</p>
+            
+            <form id="leadForm">
+                <div class="form-group">
+                    <label for="inputNome">Nome Completo *</label>
+                    <input type="text" id="inputNome" placeholder="Ex: Lucas Silva" required autocomplete="name">
+                </div>
+
+                <div class="form-group">
+                    <label for="inputTelefone">WhatsApp / Telefone *</label>
+                    <input type="tel" id="inputTelefone" placeholder="(11) 98888-7777" required autocomplete="tel" inputmode="numeric">
+                </div>
+
+                <div class="form-group">
+                    <label for="inputCPF">CPF <span class="optional">(opcional)</span></label>
+                    <input type="text" id="inputCPF" placeholder="000.000.000-00" autocomplete="off" inputmode="numeric">
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="checkLGPD" required>
+                    <label for="checkLGPD">
+                        Concordo em receber informações sobre cursos, bolsas e benefícios da instituição via WhatsApp/telefone.
+                    </label>
+                </div>
+
+                <button type="submit" id="btnSubmit" class="btn btn-primary" disabled>
+                    Cadastrar e Girar 🎯
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <!-- Modal de Onboarding (Definição do Código de Operador no Primeiro Acesso) -->
+    <div id="onboardingModal" class="modal-overlay">
+        <div class="modal-content">
+            <div style="font-size: 3rem; margin-bottom: 12px;">📱</div>
+            <h2>Identificação do Operador</h2>
+            <p class="subtitle" style="margin-bottom: 20px;">
+                Informe seu nome ou código de operador para registrar os atendimentos deste aparelho.
+            </p>
+            <form id="onboardingForm">
+                <div class="form-group">
+                    <input type="text" id="inputOperadorId" placeholder="Ex: OP-01 ou JOAO" required autofocus>
+                </div>
+                <button type="submit" class="btn btn-primary">Iniciar Atendimento</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Prêmio Sorteado -->
+    <div id="prizeModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="prize-icon">🎉</div>
+            <h2>Parabéns!</h2>
+            <p class="subtitle">Você acabou de conquistar:</p>
+            <div class="prize-name" id="prizeTitle">Benefício Sorteado</div>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+                Apresente seus dados no atendimento para validar o seu benefício!
+            </p>
+            <button id="btnNewSpin" class="btn btn-primary">Nova Participação 🔄</button>
+        </div>
+    </div>
+
+    <!-- Modal do Painel Administrativo -->
+    <div id="adminModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 520px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="margin: 0; font-size: 1.25rem;">Painel Administrativo</h2>
+                <button id="btnCloseAdmin" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
+            </div>
+
+            <!-- Tela de Login Admin -->
+            <div id="adminLoginSec">
+                <p class="subtitle" style="text-align: left; margin-bottom: 12px;">Digite a senha de administrador:</p>
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <input type="password" id="adminPassword" placeholder="Senha do painel" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Entrar no Painel</button>
+                </form>
+            </div>
+
+            <!-- Área Logada do Admin -->
+            <div id="adminAreaSec" style="display: none;">
+                <div class="admin-tab">
+                    <button id="tabBeneficios" class="active">Benefícios da Roleta</button>
+                    <button id="tabLeads">Leads Captados</button>
+                </div>
+
+                <!-- Aba 1: Gestão de Benefícios -->
+                <div id="panelBeneficios">
+                    <form id="addBenefitForm" style="display: flex; gap: 8px; margin-bottom: 16px;">
+                        <input type="text" id="newBenefitName" placeholder="Nome do benefício" required style="flex:2;">
+                        <input type="number" id="newBenefitWeight" placeholder="Peso" value="1" min="1" max="10" style="flex:1;">
+                        <button type="submit" class="btn btn-primary" style="width: auto; padding: 0 16px;">Adicionar</button>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Benefício</th>
+                                    <th>Peso</th>
+                                    <th>Status</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="benefitsTableBody">
+                                <!-- Populado via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Aba 2: Leads Captados -->
+                <div id="panelLeads" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span id="totalLeadsCount" style="font-size: 0.9rem; font-weight: 600;">0 leads</span>
+                        <button id="btnExportCSV" class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 0.85rem;">
+                            📥 Exportar CSV
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Telefone</th>
+                                    <th>Operador</th>
+                                    <th>Prêmio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody">
+                                <!-- Populado via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px; text-align: right;">
+                    <button id="btnAdminLogout" class="btn btn-outline" style="width: auto; padding: 6px 14px; font-size: 0.85rem;">Sair do Painel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Desenvolvido para ações presenciais de captação • 100% Offline-First</p>
+    </footer>
+
+    <!-- Scripts da Aplicação -->
+    <script src="config.js"></script>
+    <script src="armazenamento-offline.js"></script>
+    <script src="roleta.js"></script>
+    <script src="cadastro-lead.js"></script>
+    <script src="admin.js"></script>
+
+    <!-- Orquestrador da Interface -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Configurações Iniciais do Header
+            if (typeof CONFIG !== 'undefined' && CONFIG.INSTITUICAO_NOME) {
+                document.getElementById('instNameHeader').textContent = CONFIG.INSTITUICAO_NOME;
+            }
+
+            // 2. Registro do Service Worker para PWA
+            if ('serviceWorker' in navigator) {
+                try {
+                    await navigator.serviceWorker.register('sw.js');
+                    console.log('Service Worker registrado com sucesso');
+                } catch (e) {
+                    console.warn('Falha ao registrar Service Worker:', e);
+                }
+            }
+
+            // 3. Verificação de Onboarding do Operador
+            let operadorId = localStorage.getItem('roleta_operador_id');
+            const onboardingModal = document.getElementById('onboardingModal');
+            if (!operadorId) {
+                onboardingModal.classList.add('active');
+                document.getElementById('onboardingForm').onsubmit = (e) => {
+                    e.preventDefault();
+                    const val = document.getElementById('inputOperadorId').value.trim();
+                    if (val) {
+                        localStorage.setItem('roleta_operador_id', val);
+                        onboardingModal.classList.remove('active');
+                    }
+                };
+            }
+
+            // 4. Inicialização da Roleta
+            const wheelCanvas = document.getElementById('wheelCanvas');
+            Roleta.init(wheelCanvas);
+
+            // 5. Atualização da Barra de Conectividade e Sync Status
+            const connBadge = document.getElementById('connBadge');
+            const pendingBadge = document.getElementById('pendingBadge');
+
+            window.addEventListener('sync-status', (e) => {
+                const { pendentes, sincronizando, online } = e.detail;
+                if (online) {
+                    connBadge.className = 'badge badge-online';
+                    connBadge.textContent = sincronizando ? 'Sincronizando...' : '● Online';
+                } else {
+                    connBadge.className = 'badge badge-offline';
+                    connBadge.textContent = '● Modo Offline';
+                }
+
+                if (pendentes > 0) {
+                    pendingBadge.classList.remove('zero');
+                    pendingBadge.textContent = `${pendentes} pendente(s)`;
+                } else {
+                    pendingBadge.classList.add('zero');
+                }
+            });
+
+            // 6. Configuração do Formulário de Lead
+            const leadForm = document.getElementById('leadForm');
+            const btnSubmit = document.getElementById('btnSubmit');
+            const prizeModal = document.getElementById('prizeModal');
+            const prizeTitle = document.getElementById('prizeTitle');
+            const btnNewSpin = document.getElementById('btnNewSpin');
+
+            CadastroLead.initForm({
+                formElement: leadForm,
+                inputNome: document.getElementById('inputNome'),
+                inputTelefone: document.getElementById('inputTelefone'),
+                inputCPF: document.getElementById('inputCPF'),
+                checkLGPD: document.getElementById('checkLGPD'),
+                btnSubmit: btnSubmit,
+                onLeadPronto: async (lead) => {
+                    // Executa o giro assim que o lead é salvo localmente
+                    btnSubmit.disabled = true;
+                    btnSubmit.textContent = 'Girando a roleta... 🎰';
+                    
+                    try {
+                        const premio = await Roleta.girar(4000);
+                        // Atualiza o lead com o prêmio sorteado
+                        await Storage.atualizarLead(lead.id, { beneficio_sorteado: premio.nome });
+                        
+                        // Exibe modal de comemoração
+                        prizeTitle.textContent = premio.nome;
+                        prizeModal.classList.add('active');
+                    } catch (err) {
+                        console.error("Erro no giro:", err);
+                        alert("Erro ao realizar o sorteio. Tente novamente.");
+                        btnSubmit.disabled = false;
+                        btnSubmit.textContent = 'Cadastrar e Girar 🎯';
+                    }
+                }
+            });
+
+            btnNewSpin.onclick = () => {
+                prizeModal.classList.remove('active');
+                CadastroLead.resetarForm(leadForm, btnSubmit);
+            };
+
+            // 7. Configuração do Painel Admin
+            const adminModal = document.getElementById('adminModal');
+            const btnOpenAdmin = document.getElementById('btnOpenAdmin');
+            const btnCloseAdmin = document.getElementById('btnCloseAdmin');
+            const adminLoginSec = document.getElementById('adminLoginSec');
+            const adminAreaSec = document.getElementById('adminAreaSec');
+            const adminLoginForm = document.getElementById('adminLoginForm');
+            const tabBeneficios = document.getElementById('tabBeneficios');
+            const tabLeads = document.getElementById('tabLeads');
+            const panelBeneficios = document.getElementById('panelBeneficios');
+            const panelLeads = document.getElementById('panelLeads');
+
+            btnOpenAdmin.onclick = () => {
+                adminModal.classList.add('active');
+                if (Admin.checarAutenticacao()) {
+                    mostrarAreaAdmin();
+                } else {
+                    adminLoginSec.style.display = 'block';
+                    adminAreaSec.style.display = 'none';
+                }
+            };
+
+            btnCloseAdmin.onclick = () => adminModal.classList.remove('active');
+
+            adminLoginForm.onsubmit = (e) => {
+                e.preventDefault();
+                const senha = document.getElementById('adminPassword').value;
+                if (Admin.autenticar(senha)) {
+                    document.getElementById('adminPassword').value = '';
+                    mostrarAreaAdmin();
+                } else {
+                    alert('Senha incorreta.');
+                }
+            };
+
+            document.getElementById('btnAdminLogout').onclick = () => {
+                Admin.logout();
+                adminLoginSec.style.display = 'block';
+                adminAreaSec.style.display = 'none';
+            };
+
+            tabBeneficios.onclick = () => {
+                tabBeneficios.classList.add('active');
+                tabLeads.classList.remove('active');
+                panelBeneficios.style.display = 'block';
+                panelLeads.style.display = 'none';
+            };
+
+            tabLeads.onclick = async () => {
+                tabLeads.classList.add('active');
+                tabBeneficios.classList.remove('active');
+                panelLeads.style.display = 'block';
+                panelBeneficios.style.display = 'none';
+                await carregarTabelaLeads();
+            };
+
+            async function mostrarAreaAdmin() {
+                adminLoginSec.style.display = 'none';
+                adminAreaSec.style.display = 'block';
+                await carregarTabelaBeneficios();
+            }
+
+            async function carregarTabelaBeneficios() {
+                const beneficios = await Admin.listarBeneficiosAdmin();
+                const tbody = document.getElementById('benefitsTableBody');
+                tbody.innerHTML = '';
+                beneficios.forEach((b) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${b.nome}</strong></td>
+                        <td>${b.peso || 1}</td>
+                        <td><span style="color:${b.ativo ? 'var(--success)' : 'var(--danger)'}">${b.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                        <td>
+                            <button class="btn-toggle" style="cursor:pointer; background:none; border:none; color:var(--primary);">${b.ativo ? 'Pausar' : 'Ativar'}</button>
+                            <button class="btn-delete" style="cursor:pointer; background:none; border:none; color:var(--danger); margin-left:6px;">Excluir</button>
+                        </td>
+                    `;
+                    tr.querySelector('.btn-toggle').onclick = async () => {
+                        await Admin.toggleStatusBeneficio(b.id);
+                        await carregarTabelaBeneficios();
+                    };
+                    tr.querySelector('.btn-delete').onclick = async () => {
+                        if (confirm(`Remover "${b.nome}"?`)) {
+                            await Admin.removerBeneficio(b.id);
+                            await carregarTabelaBeneficios();
+                        }
+                    };
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('addBenefitForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const nome = document.getElementById('newBenefitName').value;
+                const peso = document.getElementById('newBenefitWeight').value;
+                await Admin.adicionarBeneficio(nome, peso);
+                document.getElementById('newBenefitName').value = '';
+                await carregarTabelaBeneficios();
+            };
+
+            async function carregarTabelaLeads() {
+                const leads = await Storage.listarLeads();
+                document.getElementById('totalLeadsCount').textContent = `${leads.length} lead(s) registrados`;
+                const tbody = document.getElementById('leadsTableBody');
+                tbody.innerHTML = '';
+                leads.slice(0, 50).forEach((l) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${l.nome}</strong></td>
+                        <td>${l.telefone}</td>
+                        <td>${l.operador_id}</td>
+                        <td>${l.beneficio_sorteado || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('btnExportCSV').onclick = () => Admin.exportarCSV();
+        });
+    </script>
+</body>
+</html>

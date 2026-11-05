@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Roleta de benefícios offline-first para captação de leads.">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Roleta">
+    <title>Roleta de Benefícios</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/roleta.css">
+</head>
+<body>
+
+    <!-- Header Fixo Superior -->
+    <header class="app-header">
+        <div class="brand">
+            <span class="brand-icon">🎰</span>
+            <div class="brand-text">
+                <span class="brand-title">Roleta de Benefícios</span>
+                <span class="brand-sub" id="instNameHeader">Faculdade & Cursos Técnicos</span>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <span id="connBadge" class="badge badge-online">● Online</span>
+            <span id="pendingBadge" class="badge badge-pending hidden" title="Clique para sincronizar">0 pendente(s)</span>
+            <button id="btnOpenAdmin" class="btn-icon" aria-label="Painel Administrativo" title="Painel Admin">⚙️</button>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="container">
+        <!-- Banner Opcional de Instalação PWA -->
+        <div id="pwaInstallBanner" class="pwa-banner hidden">
+            <div class="pwa-banner-text">
+                <span>📲</span>
+                <span>Instalar aplicativo na tela inicial</span>
+            </div>
+            <button id="btnInstallPWA" class="btn btn-sm btn-primary">Instalar</button>
+        </div>
+
+        <!-- Resumo do Operador -->
+        <section class="operator-stats" aria-label="Meus cadastros">
+            <div class="operator-stats-main">
+                <div class="operator-stats-top">
+                    <span>Seus cadastros hoje</span>
+                    <span class="operator-stats-numbers">
+                        <strong id="operatorLeadsCount" class="operator-stats-count">0</strong>
+                        <span id="operatorLeadsGoal" class="operator-stats-goal">/ 50</span>
+                    </span>
+                </div>
+                <div id="operatorProgress" class="operator-progress" role="progressbar" aria-label="Progresso da meta diária" aria-valuemin="0" aria-valuemax="50" aria-valuenow="0">
+                    <div id="operatorProgressBar" class="operator-progress-bar"></div>
+                </div>
+            </div>
+            <button type="button" id="btnMeusLeads" class="operator-link">Ver meus leads</button>
+        </section>
+
+        <!-- Seção da Roleta -->
+        <section class="wheel-section" aria-label="Roleta de Prêmios">
+            <div class="wheel-wrapper">
+                <div id="wheelNeedle" class="wheel-needle"></div>
+                <canvas id="wheelCanvas" width="360" height="360"></canvas>
+            </div>
+            <div class="wheel-info">Gire a roleta e ganhe descontos e brindes imediatos!</div>
+        </section>
+
+        <!-- Card de Cadastro do Participante -->
+        <section class="card" id="formCard">
+            <h2 class="card-title">Participe do Sorteio</h2>
+            <p class="card-subtitle">Preencha seus dados para habilitar o giro da roleta</p>
+
+            <form id="leadForm" novalidate>
+                <div class="form-group">
+                    <label for="inputNome" class="form-label">Nome Completo *</label>
+                    <input type="text" id="inputNome" class="form-control" placeholder="Ex: Lucas Silva" required autocomplete="name" autocapitalize="words">
+                </div>
+
+                <div class="form-group">
+                    <label for="inputTelefone" class="form-label">WhatsApp / Telefone *</label>
+                    <input type="tel" id="inputTelefone" class="form-control" placeholder="(11) 98888-7777" required autocomplete="tel" inputmode="numeric">
+                </div>
+
+                <div class="form-group">
+                    <label for="inputCPF" class="form-label">
+                        CPF <span class="tag-optional">(opcional)</span>
+                    </label>
+                    <input type="text" id="inputCPF" class="form-control" placeholder="000.000.000-00" autocomplete="off" inputmode="numeric">
+                </div>
+
+                <div id="dupWarning" class="inline-warning hidden" role="status" aria-live="polite">
+                    <span id="dupWarningText"></span>
+                    <button type="button" id="btnPermitirDuplicado" class="btn btn-sm btn-outline">Cadastrar mesmo assim</button>
+                </div>
+
+                <label class="checkbox-card" for="checkLGPD">
+                    <input type="checkbox" id="checkLGPD" required>
+                    <span class="checkbox-text">
+                        Concordo que meus dados de contato sejam utilizados pela <span id="consentInstitution">instituição</span> para envio de informações sobre cursos, bolsas e ofertas comerciais (LGPD).
+                        <a id="privacyLink" class="privacy-link hidden" href="#" target="_blank" rel="noopener">Política de Privacidade</a>
+                    </span>
+                </label>
+
+                <button type="submit" id="btnSubmit" class="btn btn-primary" disabled>
+                    Cadastrar e Girar 🎯
+                </button>
+            </form>
+        </section>
+    </main>
+
+    <!-- Canvas Flutuante de Confetes -->
+    <canvas id="confettiCanvas"></canvas>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <!-- Modal 1: Onboarding do Operador -->
+    <div id="onboardingModal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-card text-center">
+            <div style="font-size: 3.5rem; margin-bottom: 12px;">📱</div>
+            <h2 class="modal-title" style="margin-bottom: 6px;">Identificação do Operador</h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+                Identifique este aparelho para associar os cadastros de campo ao seu turno de captação.
+            </p>
+            <form id="onboardingForm">
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <input type="text" id="inputOperadorId" class="form-control text-center" placeholder="Ex: OP-01 ou MARIA" required style="font-weight:700; letter-spacing:1px;">
+                </div>
+                <button type="submit" class="btn btn-primary">Iniciar Captação</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Comemoração do Benefício Sorteado -->
+    <div id="prizeModal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-card">
+            <div class="prize-content">
+                <div class="prize-badge-icon">🎉</div>
+                <h2 style="font-size: 1.2rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Parabéns!</h2>
+                <div class="prize-won-title" id="prizeWonTitle" aria-live="polite">Benefício Sorteado</div>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 24px;">
+                    Seu benefício foi registrado! Nossa equipe entrará em contato para o resgate do prêmio.
+                </p>
+                <button id="btnNewSpin" class="btn btn-primary">Nova Participação 🔄</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Painel Administrativo -->
+    <div id="adminModal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 class="modal-title">Gestão da Roleta</h2>
+                <button id="btnCloseAdmin" class="modal-close" aria-label="Fechar">&times;</button>
+            </div>
+
+            <!-- Login Admin -->
+            <div id="adminLoginBox">
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 14px;">
+                    Entre com a conta de administrador criada no Supabase para gerenciar prêmios e consultar todos os leads.
+                </p>
+                <div id="adminConfigWarning" class="inline-warning inline-warning-block hidden">
+                    Supabase não configurado. Preencha <strong>SUPABASE_URL</strong> e <strong>SUPABASE_ANON_KEY</strong> em <strong>js/config.js</strong>.
+                </div>
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="adminEmailInput" class="form-label">E-mail do administrador</label>
+                        <input type="email" id="adminEmailInput" class="form-control" placeholder="admin@instituicao.com.br" autocomplete="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPasswordInput" class="form-label">Senha</label>
+                        <input type="password" id="adminPasswordInput" class="form-control" placeholder="Senha do administrador" autocomplete="current-password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Entrar no Painel</button>
+                </form>
+            </div>
+
+            <!-- Área Logada -->
+            <div id="adminPanelBox" class="hidden">
+                <div class="admin-session-bar">
+                    <span>Administrador: <strong id="adminUserEmail">-</strong></span>
+                    <button id="btnAdminLogout" class="btn btn-sm btn-outline">Sair</button>
+                </div>
+                <div class="tabs">
+                    <button id="tabBeneficios" class="tab-btn active">Prêmios da Roleta</button>
+                    <button id="tabLeads" class="tab-btn">Leads Captados</button>
+                </div>
+
+                <!-- Aba Prêmios -->
+                <div id="viewBeneficios">
+                    <form id="addBenefitForm" style="display: flex; gap: 8px; margin-bottom: 14px;">
+                        <input type="text" id="newBenefitName" class="form-control" placeholder="Nome do prêmio" required style="flex:2;">
+                        <input type="number" id="newBenefitWeight" class="form-control" placeholder="Peso" value="1" min="1" max="100" style="flex:1;" title="Probabilidade de sorteio">
+                        <button type="submit" class="btn btn-primary btn-sm" style="flex-shrink:0;">+ Adicionar</button>
+                    </form>
+
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Prêmio</th>
+                                    <th>Peso</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="benefitsTableBody">
+                                <!-- Preenchido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Aba Leads -->
+                <div id="viewLeads" class="hidden">
+                    <div class="leads-toolbar">
+                        <span id="totalLeadsCount" style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">0 leads</span>
+                        <div class="leads-toolbar-actions">
+                            <button id="btnRefreshLeads" class="btn btn-sm btn-outline">↻ Atualizar</button>
+                            <button id="btnExportCSV" class="btn btn-sm btn-outline">📥 Baixar CSV</button>
+                        </div>
+                    </div>
+
+                    <p id="adminLeadsStatus" class="inline-warning hidden" role="status"></p>
+
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Telefone</th>
+                                    <th>CPF</th>
+                                    <th>Operador</th>
+                                    <th>Prêmio</th>
+                                    <th>Data</th>
+                                    <th>Sync</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody">
+                                <!-- Preenchido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Meus Leads (visão do operador) -->
+    <div id="meusLeadsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="meusLeadsTitle">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 class="modal-title" id="meusLeadsTitle">Meus leads</h2>
+                <button id="btnCloseMeusLeads" class="modal-close" aria-label="Fechar">&times;</button>
+            </div>
+            <p class="modal-subtitle">Cadastros feitos por <strong id="meusLeadsOperador">-</strong> neste aparelho.</p>
+            <div class="operator-summary">
+                <span>Hoje: <strong id="meusLeadsHoje">0</strong> / <strong id="meusLeadsMeta">50</strong></span>
+                <span>Total local: <strong id="meusLeadsTotal">0</strong></span>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>Prêmio</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody id="meusLeadsTableBody">
+                        <!-- Preenchido dinamicamente via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <p class="operator-note">A contagem considera apenas os cadastros deste aparelho. Para relatórios completos, fale com o administrador.</p>
+        </div>
+    </div>
+
+    <!-- Scripts da Aplicação (Ordem de Dependência Respeitada) -->
+    <script src="js/utils.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/confetti.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/roleta.js"></script>
+    <script src="js/cadastro.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

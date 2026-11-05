@@ -1,0 +1,14 @@
+{
+  "name": "roleta-beneficios",
+  "version": "2.0.0",
+  "private": true,
+  "description": "PWA offline-first para captação de leads e sorteio de benefícios",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "check": "for f in js/*.js sw.js; do node --check \"$f\" || exit 1; done",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

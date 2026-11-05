@@ -1,0 +1,15 @@
+.agents/
+.claude/
+.reversa/
+_reversa_forward/
+_reversa_sdd/
+tests/
+scripts/
+supabase/
+roleta.html
+README.md
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+package.json
+package-lock.json

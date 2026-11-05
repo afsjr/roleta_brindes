@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Roleta de Sorteio</title>
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%234f46e5'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='white'%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E" />
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(160deg, #eef2ff 0%, #f8fafc 100%);
+            color: #1e293b;
+            min-height: 100vh;
+            padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+        }
+
+        header {
+            text-align: center;
+            padding: 24px 0 12px;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            color: #4f46e5;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        main {
+            max-width: 500px;
+            margin: 0 auto 40px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn .3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px rgba(79, 70, 229, .08);
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            color: #4f46e5;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-row input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color .2s;
+            background: #fff;
+            color: inherit;
+        }
+
+        .input-row input:focus {
+            border-color: #4f46e5;
+        }
+
+        .input-row button {
+            width: 44px;
+            border: none;
+            background: #4f46e5;
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background .2s;
+        }
+
+        .input-row button:hover {
+            background: #4338ca;
+        }
+
+        .chip-list {
+            list-style: none;
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip-list li {
+            background: #eef2ff;
+            color: #4f46e5;
+            padding: 6px 10px 6px 12px;
+            border-radius: 999px;
+            font-size: .85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chip-list li button {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: .9rem;
+            cursor: pointer;
+        }
+
+        .toggle input {
+            width: 18px;
+            height: 18px;
+            accent-color: #4f46e5;
+        }
+
+        .primary-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(79, 70, 229, .3);
+            transition: transform .15s, opacity .2s;
+        }
+
+        .primary-btn:active {
+            transform: scale(.97);
+        }
+
+        .primary-btn:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .wheel-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        #wheelCanvas {
+            width: 100%;
+            max-width: 360px;
+            height: auto;
+            aspect-ratio: 1/1;
+        }
+
+        .pointer {
+            position: absolute;
+            top: 0;
+            font-size: 2rem;
+            color: #ef4444;
+            z-index: 2;
+            transform: translateY(-10%);
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .2));
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 12px;
+            color: #64748b;
+            font-size: .9rem;
+            min-height: 1.2em;
+        }
+
+        .results-list {
+            list-style: none;
+        }
+
+        .results-list li {
+            background: #fff;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .results-list .name {
+            font-weight: 600;
+        }
+
+        .results-list .prize {
+            color: #7c3aed;
+            font-weight: 500;
+            font-size: .9rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .secondary-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1.5px solid #4f46e5;
+            background: #fff;
+            color: #4f46e5;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 120px;
+        }
+
+        .danger-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1.5px solid #ef4444;
+            background: #fff;
+            color: #ef4444;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 120px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>🎡 Roleta de Sorteio</h1>
+        <p class="subtitle">Sorteio justo e offline</p>
+    </header>
+
+    <main>
+        <section id="setup" class="screen active">
+            <div class="card">
+                <h2>Participantes</h2>
+                <div class="input-row">
+                    <input id="participantInput" type="text" placeholder="Nome do participante" />
+                    <button id="addParticipant">+</button>
+                </div>
+                <ul id="participantList" class="chip-list"></ul>
+            </div>
+
+            <div class="card">
+                <h2>Prêmios / Bolsas</h2>
+                <div class="input-row">
+                    <input id="prizeInput" type="text" placeholder="Ex: Bolsa 100%" />
+                    <input id="prizeQty" type="number" min="1" value="1" style="max-width:70px" />
+                    <button id="addPrize">+</button>
+                </div>
+                <ul id="prizeList" class="chip-list"></ul>
+            </div>
+
+            <div class="card">
+                <label class="toggle">
+                    <input type="checkbox" id="allowRepeat" />
+                    <span>Permitir que um participante ganhe mais de um prêmio</span>
+                </label>
+            </div>
+
+            <button id="startBtn" class="primary-btn" disabled>Iniciar Sorteio</button>
+        </section>
+
+        <section id="wheel" class="screen">
+            <div class="wheel-container">
+                <canvas id="wheelCanvas" width="600" height="600"></canvas>
+                <div class="pointer">▼</div>
+            </div>
+            <button id="spinBtn" class="primary-btn">GIRAR!</button>
+            <p id="spinStatus" class="status"></p>
+        </section>
+
+        <section id="results" class="screen">
+            <h2 style="margin-bottom:16px;color:#4f46e5">🏆 Resultado do Sorteio</h2>
+            <ul id="resultList" class="results-list"></ul>
+            <div class="actions">
+                <button id="copyBtn" class="secondary-btn">Copiar resultado</button>
+                <button id="restartBtn" class="secondary-btn">Novo sorteio</button>
+                <button id="resetBtn" class="danger-btn">Apagar tudo</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        /* ============================================================
+           ROLETA DE SORTEIO — versão arquivo único, 100% offline
+           Aleatoriedade com crypto.getRandomValues (CSPRNG)
+           ============================================================ */
+
+        const state = {
+            participants: [],
+            prizes: [],        // [{ name, qty }]
+            allowRepeat: false,
+            assignments: [],
+            spinning: false,
+            rotation: 0
+        };
+
+        // ---------- Aleatoriedade segura ----------
+        function randomInt(maxExclusive) {
+            if (maxExclusive <= 0) return 0;
+            const range = maxExclusive;
+            const limit = Math.floor(0xFFFFFFFF / range) * range;
+            const buf = new Uint32Array(1);
+            do { crypto.getRandomValues(buf); } while (buf[0] >= limit);
+            return buf[0] % range;
+        }
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = randomInt(i + 1);
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // ---------- Persistência ----------
+        const STORAGE_KEY = 'roleta-state-v1';
+        function save() {
+            const { participants, prizes, allowRepeat } = state;
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ participants, prizes, allowRepeat }));
+            } catch (e) { }
+        }
+        function load() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                state.participants = data.participants || [];
+                state.prizes = data.prizes || [];
+                state.allowRepeat = !!data.allowRepeat;
+            } catch (e) { }
+        }
+
+        // ---------- Helpers DOM ----------
+        const $ = (id) => document.getElementById(id);
+        const screens = { setup: $('setup'), wheel: $('wheel'), results: $('results') };
+        function showScreen(name) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            screens[name].classList.add('active');
+        }
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // ---------- Renderização ----------
+        function renderParticipants() {
+            const ul = $('participantList');
+            ul.innerHTML = '';
+            state.participants.forEach((p, i) => {
+                const li = document.createElement('li');
+                li.innerHTML = `${escapeHtml(p)} <button aria-label="Remover">×</button>`;
+                li.querySelector('button').onclick = () => {
+                    state.participants.splice(i, 1);
+                    save(); renderParticipants(); updateStartBtn();
+                };
+                ul.appendChild(li);
+            });
+        }
+        function renderPrizes() {
+            const ul = $('prizeList');
+            ul.innerHTML = '';
+            state.prizes.forEach((p, i) => {
+                const label = p.qty > 1 ? `${p.name} ×${p.qty}` : p.name;
+                const li = document.createElement('li');
+                li.innerHTML = `${escapeHtml(label)} <button aria-label="Remover">×</button>`;
+                li.querySelector('button').onclick = () => {
+                    state.prizes.splice(i, 1);
+                    save(); renderPrizes(); updateStartBtn();
+                };
+                ul.appendChild(li);
+            });
+        }
+        function totalPrizes() {
+            return state.prizes.reduce((s, p) => s + p.qty, 0);
+        }
+        function updateStartBtn() {
+            $('startBtn').disabled = !(state.participants.length >= 1 && totalPrizes() >= 1);
+        }
+
+        // ---------- Entradas ----------
+        $('addParticipant').onclick = () => {
+            const input = $('participantInput');
+            const name = input.value.trim();
+            if (!name) return;
+            if (state.participants.includes(name)) { input.value = ''; return; }
+            state.participants.push(name);
+            input.value = ''; input.focus();
+            save(); renderParticipants(); updateStartBtn();
+        };
+        $('participantInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') $('addParticipant').click();
+        });
+        $('addPrize').onclick = () => {
+            const nameEl = $('prizeInput');
+            const qtyEl = $('prizeQty');
+            const name = nameEl.value.trim();
+            const qty = Math.max(1, parseInt(qtyEl.value) || 1);
+            if (!name) return;
+            state.prizes.push({ name, qty });
+            nameEl.value = ''; qtyEl.value = 1; nameEl.focus();
+            save(); renderPrizes(); updateStartBtn();
+        };
+        $('prizeInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') $('addPrize').click();
+        });
+        $('allowRepeat').addEventListener('change', e => {
+            state.allowRepeat = e.target.checked; save();
+        });
+
+        // ---------- Distribuição ----------
+        function computeAssignments() {
+            const prizePool = [];
+            state.prizes.forEach(p => {
+                for (let i = 0; i < p.qty; i++) prizePool.push(p.name);
+            });
+            const shuffledPrizes = shuffle(prizePool);
+            let eligible = shuffle(state.participants);
+            const result = [];
+
+            for (const prize of shuffledPrizes) {
+                if (eligible.length === 0) {
+                    if (!state.allowRepeat) break;
+                    eligible = shuffle(state.participants);
+                }
+                const person = eligible[randomInt(eligible.length)];
+                result.push({ name: person, prize });
+                if (!state.allowRepeat) {
+                    const idx = eligible.indexOf(person);
+                    if (idx !== -1) eligible.splice(idx, 1);
+                }
+            }
+            return result;
+        }
+
+        // ---------- Roleta ----------
+        const canvas = $('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const R = W / 2 - 10;
+        const COLORS = [
+            '#4f46e5', '#7c3aed', '#ec4899', '#f59e0b',
+            '#10b981', '#06b6d4', '#ef4444', '#8b5cf6'
+        ];
+
+        function getWheelSlices() {
+            const pool = [];
+            state.prizes.forEach(p => {
+                for (let i = 0; i < p.qty; i++) pool.push(p.name);
+            });
+            return pool;
+        }
+
+        function drawWheel(rotation = 0) {
+            const slices = getWheelSlices();
+            ctx.clearRect(0, 0, W, H);
+            if (slices.length === 0) {
+                ctx.fillStyle = '#e2e8f0';
+                ctx.beginPath(); ctx.arc(W / 2, H / 2, R, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = 'bold 28px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Adicione prêmios', W / 2, H / 2);
+                return;
+            }
+            const arc = (Math.PI * 2) / slices.length;
+            for (let i = 0; i < slices.length; i++) {
+                const start = rotation + i * arc;
+                const end = start + arc;
+                ctx.beginPath();
+                ctx.moveTo(W / 2, H / 2);
+                ctx.arc(W / 2, H / 2, R, start, end);
+                ctx.closePath();
+                ctx.fillStyle = COLORS[i % COLORS.length];
+                ctx.fill();
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+
+                ctx.save();
+                ctx.translate(W / 2, H / 2);
+                ctx.rotate(start + arc / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 22px sans-serif';
+                const label = slices[i].length > 18 ? slices[i].slice(0, 16) + '…' : slices[i];
+                ctx.fillText(label, R - 20, 8);
+                ctx.restore();
+            }
+            ctx.beginPath();
+            ctx.arc(W / 2, H / 2, 34, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff'; ctx.fill();
+            ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 4; ctx.stroke();
+        }
+
+        function spinWheel(durationMs = 4200) {
+            return new Promise(resolve => {
+                const start = performance.now();
+                const startRotation = state.rotation;
+                const extraTurns = 6 + randomInt(3);
+                const endRotation = startRotation + extraTurns * Math.PI * 2
+                    + randomInt(1000) / 1000 * Math.PI * 2;
+                function frame(now) {
+                    const t = Math.min(1, (now - start) / durationMs);
+                    const eased = 1 - Math.pow(1 - t, 3);
+                    state.rotation = startRotation + (endRotation - startRotation) * eased;
+                    drawWheel(state.rotation);
+                    if (t < 1) requestAnimationFrame(frame);
+                    else resolve();
+                }
+                requestAnimationFrame(frame);
+            });
+        }
+
+        // ---------- Fluxo ----------
+        $('startBtn').onclick = () => {
+            state.assignments = computeAssignments();
+            if (state.assignments.length === 0) {
+                alert('Não há prêmios suficientes ou participantes.');
+                return;
+            }
+            showScreen('wheel');
+            drawWheel(state.rotation);
+            $('spinStatus').textContent = `${state.assignments.length} prêmio(s) serão sorteados`;
+            $('spinBtn').disabled = false;
+        };
+
+        $('spinBtn').onclick = async () => {
+            if (state.spinning) return;
+            state.spinning = true;
+            $('spinBtn').disabled = true;
+            $('spinStatus').textContent = 'Girando...';
+            await spinWheel(4200);
+            $('spinStatus').textContent = 'Pronto!';
+            state.spinning = false;
+            renderResults();
+            showScreen('results');
+        };
+
+        function renderResults() {
+            const ul = $('resultList');
+            ul.innerHTML = '';
+            state.assignments.forEach(a => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="name">${escapeHtml(a.name)}</span>
+                    <span class="prize">${escapeHtml(a.prize)}</span>`;
+                ul.appendChild(li);
+            });
+        }
+
+        $('copyBtn').onclick = async () => {
+            const text = state.assignments.map(a => `${a.name} → ${a.prize}`).join('\n');
+            try {
+                await navigator.clipboard.writeText(text);
+                $('copyBtn').textContent = 'Copiado! ✓';
+                setTimeout(() => $('copyBtn').textContent = 'Copiar resultado', 1500);
+            } catch {
+                alert(text);
+            }
+        };
+
+        $('restartBtn').onclick = () => {
+            state.assignments = computeAssignments();
+            renderResults();
+        };
+
+        $('resetBtn').onclick = () => {
+            if (!confirm('Apagar todos os participantes e prêmios?')) return;
+            state.participants = [];
+            state.prizes = [];
+            state.assignments = [];
+            state.allowRepeat = false;
+            $('allowRepeat').checked = false;
+            try { localStorage.removeItem(STORAGE_KEY); } catch (e) { }
+            renderParticipants();
+            renderPrizes();
+            updateStartBtn();
+            showScreen('setup');
+        };
+
+        // ---------- Boot ----------
+        load();
+        $('allowRepeat').checked = state.allowRepeat;
+        renderParticipants();
+        renderPrizes();
+        updateStartBtn();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,15 @@
+{
+  "schema-version": 1,
+  "feature-dir": "_reversa_forward/001-roleta-beneficios-mvp",
+  "feature-id": "001",
+  "short-name": "roleta-beneficios-mvp",
+  "started-at": "2026-11-03T04:59:00-03:00",
+  "current-stage": "done",
+  "stages-completed": [
+    "requirements",
+    "plan",
+    "to-do",
+    "coding"
+  ],
+  "paused-features": []
+}

@@ -1,0 +1,9 @@
+# Reversa
+.reversa/config.user.toml
+
+# Sistema
+.DS_Store
+Thumbs.db
+node_modules/
+*.log
+.vercel/
